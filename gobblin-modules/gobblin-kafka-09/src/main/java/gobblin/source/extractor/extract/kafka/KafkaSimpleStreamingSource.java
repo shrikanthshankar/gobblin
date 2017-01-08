@@ -44,7 +44,6 @@ import gobblin.configuration.SourceState;
  *
  * @author Shrikanth Shankar
  *
- * @deprecated use {@link KafkaDeserializerSource} and {@link KafkaDeserializerExtractor.Deserializers#BYTE_ARRAY} instead
  */
 public class KafkaSimpleStreamingSource extends EventBasedSource<String, RecordEnvelope<byte[]>> {
 
@@ -75,7 +74,8 @@ public class KafkaSimpleStreamingSource extends EventBasedSource<String, RecordE
     return consumer;
   }
 
-  @Override public List<WorkUnit> getWorkunits(SourceState state) {
+  @Override
+  public List<WorkUnit> getWorkunits(SourceState state) {
       Consumer<String, byte[]> consumer = getKafkaConsumer(state);
       LOG.warn("Consumer is " + consumer);
       String topic = state.getProp(TOPIC_WHITELIST);

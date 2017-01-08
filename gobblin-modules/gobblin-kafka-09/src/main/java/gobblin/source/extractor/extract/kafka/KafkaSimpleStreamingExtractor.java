@@ -58,7 +58,7 @@ import gobblin.writer.WatermarkStorage;
  *
  * @author Shrikanth Shankar
  *
- * @deprecated use {@link KafkaDeserializerExtractor} and {@link KafkaDeserializerExtractor.Deserializers#BYTE_ARRAY} instead
+ *
  */
 public class KafkaSimpleStreamingExtractor extends EventBasedExtractor<String, RecordEnvelope<byte[]>> implements StreamingExtractor<String, byte[]>, WatermarkStorage{
 
