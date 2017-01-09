@@ -45,7 +45,7 @@ import gobblin.configuration.SourceState;
 
 
 /**
- * A {@link KafkaSource} implementation for SimpleKafkaExtractor.
+ * A {@link Source} implementation for a simple streaming kafka extractor.
  *
  * @author Shrikanth Shankar
  *
@@ -54,7 +54,7 @@ public class KafkaSimpleStreamingSource extends EventBasedSource<String, RecordE
 
   private static final Logger LOG = LoggerFactory.getLogger(KafkaSimpleStreamingSource.class);
 
-  public static final String TOPIC_WHITELIST = "ss.streamingkafka.topic";
+  public static final String TOPIC_WHITELIST = "gobblin.streaming.kafka.topic";
   public static final String TOPIC_NAME = "topic.name";
   public static final String PARTITION_ID = "partition.id";
   private final Closer closer = Closer.create();

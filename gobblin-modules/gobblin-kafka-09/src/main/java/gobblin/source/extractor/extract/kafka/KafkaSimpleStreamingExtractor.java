@@ -78,8 +78,8 @@ public class KafkaSimpleStreamingExtractor extends EventBasedExtractor<String, R
 
       @Override
 	    public String getSource() {
-	    return _topicPartition.toString();
-	}
+	      return _topicPartition.toString();
+	    }
 
       @Override
 	    public ComparableWatermark getWatermark() {
@@ -123,95 +123,87 @@ public class KafkaSimpleStreamingExtractor extends EventBasedExtractor<String, R
       public LongWatermark getLwm() {return  _lwm;};
     }
 
-  private final KafkaSchemaRegistry<String, String> _kafkaSchemaRegistry;
-  private Consumer<String, byte[]> _consumer;
-  private TopicPartition _partition;
-  private Iterator<ConsumerRecord<String, byte[]>> _records;
+    private final KafkaSchemaRegistry<String, String> _kafkaSchemaRegistry;
+    private Consumer<String, byte[]> _consumer;
+    private TopicPartition _partition;
+    private Iterator<ConsumerRecord<String, byte[]>> _records;
+    long _rowCount = 0;
 
-  public KafkaSimpleStreamingExtractor(WorkUnitState state) {
-    super(state);
-    this._kafkaSchemaRegistry = new SimpleKafkaSchemaRegistry(state.getProperties());
-    this._consumer = KafkaSimpleStreamingSource.getKafkaConsumer(state);
-    this.closer.register(_consumer);
-    this._partition = new TopicPartition(state.getProp(KafkaSimpleStreamingSource.TOPIC_NAME),
-                                                  state.getPropAsInt(KafkaSimpleStreamingSource.PARTITION_ID));
-    _consumer.assign(Collections.singletonList(_partition));
-    OffsetAndMetadata offset = _consumer.committed(_partition);
-    if (offset == null)
-      _consumer.seekToBeginning(_partition);
-    else
-      _consumer.seek(_partition, offset.offset());
-  }
-
-  /**
-   * Get the schema (metadata) of the extracted data records.
-   *
-   * @return the Kafka topic being extracted
-   * @throws IOException if there is problem getting the schema
-   */
-  @Override
-  public String getSchema() throws IOException {
-    try {
-      return this._kafkaSchemaRegistry.getLatestSchemaByTopic(this._partition.topic());
-    } catch (SchemaRegistryException e) {
-      throw new RuntimeException(e);
+    public KafkaSimpleStreamingExtractor(WorkUnitState state) {
+      super(state);
+      this._kafkaSchemaRegistry = new SimpleKafkaSchemaRegistry(state.getProperties());
+      this._consumer = KafkaSimpleStreamingSource.getKafkaConsumer(state);
+      this.closer.register(_consumer);
+      this._partition = new TopicPartition(state.getProp(KafkaSimpleStreamingSource.TOPIC_NAME),
+                                           state.getPropAsInt(KafkaSimpleStreamingSource.PARTITION_ID));
+      _consumer.assign(Collections.singletonList(_partition));
+      OffsetAndMetadata offset = _consumer.committed(_partition);
+      if (offset == null)
+        _consumer.seekToBeginning(_partition);
+      else
+        _consumer.seek(_partition, offset.offset());
     }
-  }
 
-  @Override
-  public List<Tag<?>> generateTags(State state) {
-    List<Tag<?>> tags = super.generateTags(state);
-    tags.add(new Tag<>("kafkaTopic", state.getProp(KafkaSimpleStreamingSource.TOPIC_WHITELIST)));
-    return tags;
-  }
-
-  /**
-   * Return the next decodable record from the current partition. If the current partition has no more
-   * decodable record, move on to the next partition. If all partitions have been processed, return null.
-   */
-  @Override
-  public RecordEnvelope<byte[]> readRecordImpl(RecordEnvelope<byte[]> reuse) throws DataRecordException, IOException {
-    while ((_records == null) || (!_records.hasNext())) {
-      _records = _consumer.poll(100).iterator();
+    /**
+    * Get the schema (metadata) of the extracted data records.
+    *
+    * @return the Kafka topic being extracted
+    * @throws IOException if there is problem getting the schema
+    */
+    @Override
+    public String getSchema() throws IOException {
+      try {
+        return this._kafkaSchemaRegistry.getLatestSchemaByTopic(this._partition.topic());
+      } catch (SchemaRegistryException e) {
+        throw new RuntimeException(e);
+      }
     }
-    ConsumerRecord<String, byte[]> record = _records.next();
-    return new RecordEnvelope<byte[]>(record.value(), new KafkaWatermark(_partition, new LongWatermark(record.offset())));
-  }
 
-  @Override
-  public long getExpectedRecordCount() {
-    return Long.MAX_VALUE;
-  }
-
-  @Override
-  public void close() throws IOException {
-    closer.close();
-  }
-
-  protected static byte[] getBytes(ByteBuffer buf) {
-    byte[] bytes = null;
-    if (buf != null) {
-      int size = buf.remaining();
-      bytes = new byte[size];
-      buf.get(bytes, buf.position(), size);
+    @Override
+    public List<Tag<?>> generateTags(State state) {
+      List<Tag<?>> tags = super.generateTags(state);
+      tags.add(new Tag<>("kafkaTopic", state.getProp(KafkaSimpleStreamingSource.TOPIC_WHITELIST)));
+      return tags;
     }
-    return bytes;
-  }
 
-  @Deprecated
-  @Override
-  public long getHighWatermark() {
-    return 0;
-  }
-
-  @Override
-  public void commitWatermarks(Iterable<CheckpointableWatermark> watermarks) {
-    Map<TopicPartition, OffsetAndMetadata> wmToCommit = new HashMap<TopicPartition, OffsetAndMetadata>();
-    for (CheckpointableWatermark cwm : watermarks) {
-      Preconditions.checkArgument(cwm instanceof KafkaWatermark);
-      KafkaWatermark kwm = ((KafkaWatermark)cwm);
-      wmToCommit.put(kwm.getTopicPartition(), new OffsetAndMetadata(kwm.getLwm().getValue(), null));
+    /**
+     * Return the next record when available. Will never time out since this is a streaming source.
+     * TODO: Add interrupt so Gobblin can shut down the source.
+     */
+    @Override
+    public RecordEnvelope<byte[]> readRecordImpl(RecordEnvelope<byte[]> reuse) throws DataRecordException, IOException {
+      while ((_records == null) || (!_records.hasNext())) {
+        _records = _consumer.poll(100).iterator();
+      }
+      ConsumerRecord<String, byte[]> record = _records.next();
+      _rowCount++;
+      return new RecordEnvelope<byte[]>(record.value(), new KafkaWatermark(_partition, new LongWatermark(record.offset())));
     }
-    _consumer.commitSync(wmToCommit);
-  }
+
+    @Override
+    public long getExpectedRecordCount() {
+      return _rowCount;
+    }
+
+    @Override
+    public void close() throws IOException {
+      closer.close();
+    }
+
+    @Deprecated
+    @Override
+    public long getHighWatermark() {
+      return 0;
+    }
+
+    @Override
+    public void commitWatermarks(Iterable<CheckpointableWatermark> watermarks) {
+      Map<TopicPartition, OffsetAndMetadata> wmToCommit = new HashMap<TopicPartition, OffsetAndMetadata>();
+      for (CheckpointableWatermark cwm : watermarks) {
+        Preconditions.checkArgument(cwm instanceof KafkaWatermark);
+        KafkaWatermark kwm = ((KafkaWatermark)cwm);
+        wmToCommit.put(kwm.getTopicPartition(), new OffsetAndMetadata(kwm.getLwm().getValue()));
+      }
+      _consumer.commitSync(wmToCommit);
+    }
 }
