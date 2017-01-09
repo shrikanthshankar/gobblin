@@ -1,13 +1,18 @@
 /*
- * Copyright (C) 2014-2016 NerdWallet All rights reserved.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
- * this file except in compliance with the License. You may obtain a copy of the
- * License at  http://www.apache.org/licenses/LICENSE-2.0
+ *    http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed
- * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, either express or implied.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package gobblin.source.extractor.extract.kafka;
@@ -54,7 +59,7 @@ import gobblin.writer.WatermarkStorage;
 
 
 /**
- * An implementation of {@link StreamingExtractors} from which reads from Kafka and returns records as an array of bytes.
+ * An implementation of {@link StreamingExtractor} from which reads from Kafka and returns records as an array of bytes.
  *
  * @author Shrikanth Shankar
  *
@@ -169,8 +174,8 @@ public class KafkaSimpleStreamingExtractor extends EventBasedExtractor<String, R
     while ((_records == null) || (!_records.hasNext())) {
       _records = _consumer.poll(100).iterator();
     }
-    // eventually do a commit here.
-    return new RecordEnvelope<byte[]>(_records.next().value(), new KafkaWatermark(_partition, new LongWatermark(_records.next().offset())));
+    ConsumerRecord<String, byte[]> record = _records.next();
+    return new RecordEnvelope<byte[]>(record.value(), new KafkaWatermark(_partition, new LongWatermark(record.offset())));
   }
 
   @Override
