@@ -76,7 +76,7 @@ public class KafkaSimpleStreamingSource extends EventBasedSource<String, RecordE
       consumer = new KafkaConsumer<>(props);
     } catch (Exception e) {
       LOG.error("Exception when creating Kafka consumer - {}", e);
-      throw Throwables.propagate(ioe);
+      throw Throwables.propagate(e);
     }
     return consumer;
   }

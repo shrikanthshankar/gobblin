@@ -95,7 +95,7 @@ public class KafkaSimpleStreamingExtractor extends EventBasedExtractor<String, R
 
     @Override
     public JsonElement toJson() {
-      return return WatermarkSerializerHelper.convertWatermarkToJson(this);;
+      return WatermarkSerializerHelper.convertWatermarkToJson(this);
     }
 
     @Override
@@ -110,6 +110,8 @@ public class KafkaSimpleStreamingExtractor extends EventBasedExtractor<String, R
     public boolean equals(Object obj) {
       if (obj == null)
         return false;
+      if (!(obj instanceof KafkaWatermark))
+          return false;
       return this.compareTo((CheckpointableWatermark)obj) == 0;
     }
 
