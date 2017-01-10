@@ -29,6 +29,7 @@ import org.apache.kafka.common.PartitionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Throwables;
 import com.google.common.io.Closer;
 
 import gobblin.configuration.ConfigurationKeys;
@@ -55,8 +56,8 @@ public class KafkaSimpleStreamingSource extends EventBasedSource<String, RecordE
   private static final Logger LOG = LoggerFactory.getLogger(KafkaSimpleStreamingSource.class);
 
   public static final String TOPIC_WHITELIST = "gobblin.streaming.kafka.topic";
-  public static final String TOPIC_NAME = "topic.name";
-  public static final String PARTITION_ID = "partition.id";
+  public static final String TOPIC_NAME = "gobblin.streaming.topic.name";
+  public static final String PARTITION_ID = "gobblin.streaming.partition.id";
   private final Closer closer = Closer.create();
   public static final Extract.TableType DEFAULT_TABLE_TYPE = Extract.TableType.APPEND_ONLY;
   public static final String DEFAULT_NAMESPACE_NAME = "KAFKA";
@@ -74,7 +75,8 @@ public class KafkaSimpleStreamingSource extends EventBasedSource<String, RecordE
     try {
       consumer = new KafkaConsumer<>(props);
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Exception when creating Kafka consumer - {}", e);
+      throw Throwables.propagate(ioe);
     }
     return consumer;
   }
@@ -82,14 +84,14 @@ public class KafkaSimpleStreamingSource extends EventBasedSource<String, RecordE
   @Override
   public List<WorkUnit> getWorkunits(SourceState state) {
       Consumer<String, byte[]> consumer = getKafkaConsumer(state);
-      LOG.warn("Consumer is " + consumer);
+      LOG.debug("Consumer is {}", consumer);
       String topic = state.getProp(TOPIC_WHITELIST);
       List<WorkUnit> workUnits = new ArrayList<WorkUnit>();
       List<PartitionInfo> topicPartitions;
       topicPartitions = consumer.partitionsFor(topic);
-      LOG.warn("Partition count is " + topicPartitions.size());
+      LOG.debug("Partition count is {}", topicPartitions.size());
       for (PartitionInfo topicPartition : topicPartitions){
-        LOG.warn("Partition info is " + topicPartition);
+        LOG.debug("Partition info is {}", topicPartition);
         Extract extract = this.createExtract(DEFAULT_TABLE_TYPE, DEFAULT_NAMESPACE_NAME, topicPartition.topic());
         WorkUnit workUnit = WorkUnit.create(extract);
         workUnit.setProp(TOPIC_NAME, topicPartition.topic());
@@ -101,17 +103,6 @@ public class KafkaSimpleStreamingSource extends EventBasedSource<String, RecordE
     }
 
 
-  /**
-   * Get an {@link Extractor} based on a given {@link WorkUnitState}.
-   * <p>
-   * The {@link Extractor} returned can use {@link WorkUnitState} to store arbitrary key-value pairs
-   * that will be persisted to the state store and loaded in the next scheduled job run.
-   * </p>
-   *
-   * @param state a {@link WorkUnitState} carrying properties needed by the returned {@link Extractor}
-   * @return an {@link Extractor} used to extract schema and data records from the data source
-   * @throws IOException if it fails to create an {@link Extractor}
-   */
   @Override
   public Extractor<String, RecordEnvelope<byte[]>> getExtractor(WorkUnitState state) throws IOException {
     return new KafkaSimpleStreamingExtractor(state);
