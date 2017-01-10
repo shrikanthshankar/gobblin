@@ -208,7 +208,8 @@ public class KafkaSimpleStreamingExtractor extends EventBasedExtractor<String, R
     for (CheckpointableWatermark cwm : watermarks) {
       Preconditions.checkArgument(cwm instanceof KafkaWatermark);
       KafkaWatermark kwm = ((KafkaWatermark)cwm);
-      wmToCommit.put(kwm.getTopicPartition(), new OffsetAndMetadata(kwm.getLwm().getValue()));
+      // seek requires moving offset past last record
+      wmToCommit.put(kwm.getTopicPartition(), new OffsetAndMetadata(kwm.getLwm().getValue()+1));
     }
     _consumer.commitSync(wmToCommit);
   }

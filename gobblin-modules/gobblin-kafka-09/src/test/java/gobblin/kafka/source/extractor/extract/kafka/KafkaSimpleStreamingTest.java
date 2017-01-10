@@ -144,6 +144,6 @@ public class KafkaSimpleStreamingTest {
     OffsetAndMetadata oM = kC.committed(tP);
     Assert.check(record.getWatermark() instanceof KafkaSimpleStreamingExtractor.KafkaWatermark);
     KafkaSimpleStreamingExtractor.KafkaWatermark kWM = (KafkaSimpleStreamingExtractor.KafkaWatermark)record.getWatermark();
-    Assert.check(oM.offset() == kWM.getLwm().getValue());
+    Assert.check(oM.offset() == kWM.getLwm().getValue()+1);
   }
 }
