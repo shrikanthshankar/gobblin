@@ -108,13 +108,14 @@ public class KafkaSimpleStreamingTest {
     _kafkaTestHelper.provisionTopic(topic);
 
     byte [] testData = {0, 1, 3};
+    byte [] testData1 = {2, 4, 6};
     Properties props = new Properties();
     props.put("bootstrap.servers", "localhost:" + _kafkaTestHelper.getKafkaServerPort());
     props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
     props.put("value.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer");
     Producer<String, byte[]> producer = new KafkaProducer<>(props);
     producer.send(new ProducerRecord<String, byte[]>(topic, topic, testData));
-    producer.close();
+    producer.flush();
 
     SourceState ss = new SourceState();
     ss.setProp(ConfigurationKeys.KAFKA_BROKERS, "localhost:" + _kafkaTestHelper.getKafkaServerPort());
@@ -145,5 +146,13 @@ public class KafkaSimpleStreamingTest {
     Assert.check(record.getWatermark() instanceof KafkaSimpleStreamingExtractor.KafkaWatermark);
     KafkaSimpleStreamingExtractor.KafkaWatermark kWM = (KafkaSimpleStreamingExtractor.KafkaWatermark)record.getWatermark();
     Assert.check(oM.offset() == kWM.getLwm().getValue()+1);
+
+    // write a second record.
+    producer.send(new ProducerRecord<String, byte[]>(topic, topic, testData1));
+    producer.flush();
+    // recreate extractor to force a seek.
+    kSSE = new KafkaSimpleStreamingExtractor(wSU);
+    record = kSSE.readRecord(oldRecord);
+    Assert.check(Arrays.equals(record.getRecord(), testData1));
   }
 }
