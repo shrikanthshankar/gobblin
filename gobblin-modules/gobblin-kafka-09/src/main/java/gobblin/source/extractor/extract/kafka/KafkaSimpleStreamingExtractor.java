@@ -17,6 +17,7 @@
 
 package gobblin.source.extractor.extract.kafka;
 
+import avro.shaded.com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -73,7 +74,8 @@ public class KafkaSimpleStreamingExtractor extends EventBasedExtractor<String, R
     TopicPartition _topicPartition;
     LongWatermark _lwm;
 
-    KafkaWatermark(TopicPartition topicPartition, LongWatermark lwm) {
+    @VisibleForTesting
+    public KafkaWatermark(TopicPartition topicPartition, LongWatermark lwm) {
       _topicPartition = topicPartition;
       _lwm = lwm;
     }
