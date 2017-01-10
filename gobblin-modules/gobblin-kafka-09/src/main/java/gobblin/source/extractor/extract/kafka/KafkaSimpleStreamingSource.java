@@ -85,7 +85,7 @@ public class KafkaSimpleStreamingSource extends EventBasedSource<String, RecordE
   public List<WorkUnit> getWorkunits(SourceState state) {
       Consumer<String, byte[]> consumer = getKafkaConsumer(state);
       LOG.debug("Consumer is {}", consumer);
-      String topic = state.getProp(TOPIC_WHITELIST);
+      String topic = state.getProp(TOPIC_WHITELIST); // TODO: fix this to use the new API when KafkaWrapper is fixed
       List<WorkUnit> workUnits = new ArrayList<WorkUnit>();
       List<PartitionInfo> topicPartitions;
       topicPartitions = consumer.partitionsFor(topic);
